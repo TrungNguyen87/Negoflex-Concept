@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NegoFlex: Neighborhood Figure Extraction</title>
+
+<!-- Original Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- React & Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<style>
+/* Extracted from styles.css */
+:root {
+  --bg: #f3efe6;           
+  --bg-2: #ebe5d6;         
+  --bg-card: #fbf8f1;
+  --ink: #1a1f1b;          
+  --ink-2: #3a4238;
+  --ink-3: #6b7469;
+  --line: #d6cdb8;
+  --line-2: #c4b898;
+  --green: #3a5a40;        
+  --green-2: #5a7a5c;
+  --green-pale: #c8d6ba;
+  --terracotta: #c65a2b;   
+  --terracotta-pale: #e9c4ae;
+  --ochre: #c99a34;        
+  --sky: #a8bfc9;          
+  --ok: #4a6b3a;
+  --danger: #b5431f;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg-2);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dash-move {
+  to { stroke-dashoffset: -28; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; stroke-width: 2; }
+  50% { opacity: 1; stroke-width: 4; }
+}
+
+/* Header & Intro Styles */
+.app-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.section-head {
+  max-width: 700px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--terracotta);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 42px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.1;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.section-title em {
+  font-style: italic;
+}
+
+.lede {
+  font-size: 16px;
+  color: var(--ink-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.figure-container {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px -20px rgba(26,31,27,0.15);
+  width: 100%;
+  max-width: 1200px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+/* Narrative Box Styles */
+.narrative-box {
+  padding: 24px 32px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--line);
+}
+
+.narrative-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px;
+  color: var(--terracotta);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.narrative-desc {
+  font-size: 15px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  max-width: 650px;
+}
+
+.figure-canvas {
+  width: 100%;
+  overflow-x: auto;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+
+/* New Results Panel Styles */
+.results-panel {
+  padding: 24px 32px;
+  background: var(--bg);
+  animation: float-up 0.5s ease both;
+  border-bottom: 1px solid var(--line);
+}
+
+.offers-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.offer-tag {
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.offer-tag span { color: var(--ink-3); }
+.offer-tag strong { font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--ink); }
+
+.summary-block {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  max-width: 600px;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.summary-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.summary-subtext {
+  font-size: 14px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.summary-msg {
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--ink-2);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Controls */
+.controls-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.controls-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controls-row-align {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.controls-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.tweak-seg {
+  display: flex;
+  background: var(--bg-2);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.tweak-seg button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 6px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tweak-seg button.on {
+  background: var(--bg-card);
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(26,31,27,0.08);
+  border: 1px solid var(--line-2);
+}
+
+.tweak-seg button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--bg-card);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-primary:hover { opacity: 0.8; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+select, input[type="range"] {
+  accent-color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 4px;
+}
+</style>
+</head>
+<body>
+
+<div id="root" style="width: 100%;"></div>
+
+<script type="text/babel">
+  const { useState, useEffect, Fragment } = React;
+
+  // Extracted from neighborhood.jsx
+  const BUILDING_LAYOUT = [
+    { type: 'home',     label: 'Apartments',      w: 80,  h: 105 },
+    { type: 'cafe',     label: 'Café',            w: 70,  h: 74,  hasSolar: true },
+    { type: 'office',   label: 'Office',          w: 95,  h: 142 },
+    { type: 'school',   label: 'School',          w: 150, h: 112, hasSolar: true },
+    { type: 'shop',     label: 'Supermarket',     w: 100, h: 85 },
+    { type: 'library',  label: 'Library',         w: 110, h: 110 },
+    { type: 'hotel',    label: 'Hotel',           w: 90,  h: 156 },
+    { type: 'gym',      label: 'Gym & pool',      w: 115, h: 100, hasSolar: true },
+    { type: 'hospital', label: 'Clinic',          w: 130, h: 122 },
+    { type: 'factory',  label: 'Small factory',   w: 140, h: 108, hasSolar: true },
+    { type: 'studio',   label: 'Studio',          w: 70,  h: 70 },
+    { type: 'warehouse',label: 'Warehouse',       w: 130, h: 96,  hasSolar: true },
+  ];
+
+  function computeLayout(count, gap=14) {
+    const items = BUILDING_LAYOUT.slice(0, count);
+    let x = 20;
+    return items.map((b, i) => {
+      const res = { ...b, id: i, x };
+      x += b.w + gap;
+      return res;
+    });
+  }
+
+  // Reconstructed Building SVG logic from building.jsx
+  function BuildingElevation({ type, label, x, y, w, h, lit, dimmed, hasSolar, speech, highlight, isHost }) {
+    const bottom = y + h;
+    const left = x;
+    const right = x + w;
+    const sw = 1.2;
+    const strokeColor = "var(--ink)";
+    // The host's speech bubble is always orange to designate it as the coordinator
+    const isSpeechOrange = isHost;
+
+    const W = (wx, wy, ww, wh, isLit = lit) => (
+      <rect x={wx} y={wy} width={ww} height={wh} fill={isLit ? "var(--ochre)" : "var(--sky)"} opacity={isLit ? 0.8 : 0.25} stroke={strokeColor} strokeWidth={sw*0.5} />
+    );
+
+    let bodyColor = "var(--bg-card)";
+    let roofColor = "var(--line-2)";
+    let body, roof, windows = [];
+
+    if (type === 'home') {
+      bodyColor = "var(--terracotta-pale)"; roofColor = "var(--terracotta)";
+      body = <rect x={left} y={y} width={w} height={h} fill={bodyColor} stroke={strokeColor} strokeWidth={sw}/>;
+      roof = <polygon points={`${left-6},${y} ${left+w/2},${y-24} ${right+6},${y}`} fill={roofColor} stroke={strokeColor} strokeWidth={sw} />;
+      for(let i=0; i<w/24-1; i++) {
+        for(let j=0; j<h/24-1; j++) {
+           windows.push(<Fragment key={`${i}-${j}`}>{W(left + 12 + i*24, y + 20 + j*24, 12, 16)}</Fragment>);
+        }
+      }
+    } else if (type === 'office' || type === 'hotel') {
+      bodyColor = "var(--sky)"; roofColor = "var(--ink-3)";
+      body = <rect x={left} y={y} width={w} height={h} fill={bodyColor} stroke={strokeColor} strokeWidth={sw}/>;
+      roof = <rect x={left-2} y={y} width={w+4} height={4} fill={roofColor} stroke={strokeColor} strokeWidth={sw}/>;
+      for(let i=0; i<w/16-1; i++) {
+        for(let j=0; j<h/20-1; j++) {
+          windows.push(<Fragment key={`${i}-${j}`}>{W(left + 8 + i*16, y + 16 + j*20, 10, 12)}</Fragment>);
+        }
+      }
+    } else if (type === 'school' || type === 'library' || type === 'hospital') {
+      bodyColor = "var(--bg-2)";
+      body = <rect x={left} y={y} width={w} height={h} fill={bodyColor} stroke={strokeColor} strokeWidth={sw}/>;
+      roof = <rect x={left-4} y={y} width={w+8} height={8} fill={roofColor} stroke={strokeColor} strokeWidth={sw}/>;
+      for(let i=0; i<w/30-1; i++) {
+        for(let j=0; j<h/30-1; j++) {
+          windows.push(<Fragment key={`${i}-${j}`}>{W(left + 12 + i*30, y + 20 + j*30, 20, 16)}</Fragment>);
+        }
+      }
+    } else if (type === 'shop' || type === 'cafe' || type === 'studio') {
+      bodyColor = "var(--green-pale)";
+      body = <rect x={left} y={y} width={w} height={h} fill={bodyColor} stroke={strokeColor} strokeWidth={sw}/>;
+      windows.push(<rect key="front" x={left+10} y={bottom-40} width={w-20} height={30} fill="var(--sky)" opacity={0.3} stroke={strokeColor} strokeWidth={sw}/>);
+    } else if (type === 'factory' || type === 'warehouse' || type === 'gym') {
+      bodyColor = "var(--line-2)"; roofColor = "var(--ink-2)";
+      body = <rect x={left} y={y} width={w} height={h} fill={bodyColor} stroke={strokeColor} strokeWidth={sw}/>;
+      if(type === 'factory') {
+         roof = <path d={`M ${left},${y} L ${left+w/3},${y-15} L ${left+w/3},${y} L ${left+2*w/3},${y-15} L ${left+2*w/3},${y} L ${right},${y-15} L ${right},${y} Z`} fill={roofColor} stroke={strokeColor} strokeWidth={sw} />;
+      } else {
+         roof = <polygon points={`${left-2},${y} ${left+w/2},${y-16} ${right+2},${y}`} fill={roofColor} stroke={strokeColor} strokeWidth={sw}/>;
+      }
+      windows.push(<rect key="d1" x={left+12} y={bottom-40} width={w/2-18} height={40} fill="var(--ink-3)" opacity={0.5} stroke={strokeColor} strokeWidth={sw} />);
+      windows.push(<rect key="d2" x={left+w/2+6} y={bottom-40} width={w/2-18} height={40} fill="var(--ink-3)" opacity={0.5} stroke={strokeColor} strokeWidth={sw} />);
+    }
+
+    const labelWidth = label ? label.length * 6.5 + 16 : 60;
+
+    return (
+      <g style={{ transition: 'opacity 0.4s ease' }} opacity={dimmed ? 0.35 : 1}>
+        {/* Host glow outline */}
+        {isHost && (
+          <rect x={x - 4} y={y - 4} width={w + 8} height={h + 4} fill="none" stroke="var(--sky)" strokeWidth="3" rx="2" style={{ animation: 'pulse-glow 2s infinite' }} />
+        )}
+        
+        {/* Hover highlight with label - dynamically moved up if speech bubble is present */}
+        {highlight && label && (
+          <g style={{ animation: 'float-up 0.2s ease both' }}>
+            <rect x={x - 4} y={y - 4} width={w + 8} height={h + 4} fill="none" stroke="var(--terracotta)" strokeWidth="1.5" strokeDasharray="4 4" rx="2" />
+            <rect x={x + w/2 - labelWidth/2} y={y - 26 - (speech ? 32 : 0)} width={labelWidth} height={16} rx="8" fill="var(--terracotta)" />
+            <text x={x + w/2} y={y - 15 - (speech ? 32 : 0)} fontSize="9" fontFamily="'Inter', sans-serif" fontWeight="600" textAnchor="middle" fill="var(--bg-card)">{label}</text>
+          </g>
+        )}
+
+        {body}
+        {windows}
+        {roof}
+        {hasSolar && (
+           <rect x={left+6} y={y-6} width={w-12} height={6} fill="#1a3a5a" stroke={strokeColor} strokeWidth={sw}/>
+        )}
+        {/* Floating Label / Speech bubble */}
+        {speech && (
+          <g style={{ animation: 'float-up 0.4s ease both' }}>
+            {/* Dynamic width based on text length */}
+            <rect x={x + w/2 - (speech.length * 4 + 16)} y={y - 38} width={speech.length * 8 + 32} height="24" rx="4" fill={isSpeechOrange ? "var(--terracotta)" : "var(--bg-card)"} stroke={isSpeechOrange ? "var(--terracotta)" : "var(--ink)"} strokeWidth="0.8"/>
+            <polygon points={`${x+w/2-5},${y-14} ${x+w/2+5},${y-14} ${x+w/2},${y-8}`} fill={isSpeechOrange ? "var(--terracotta)" : "var(--bg-card)"} stroke={isSpeechOrange ? "var(--terracotta)" : "var(--ink)"} strokeWidth="0.8"/>
+            <line x1={x+w/2-4} y1={y-14} x2={x+w/2+4} y2={y-14} stroke={isSpeechOrange ? "var(--terracotta)" : "var(--bg-card)"} strokeWidth="2" />
+            <text x={x + w/2} y={y - 21} fontSize="11" fontFamily="'JetBrains Mono', monospace" textAnchor="middle" fill={isSpeechOrange ? "var(--bg-card)" : "var(--ink)"} fontWeight="500">{speech}</text>
+          </g>
+        )}
+      </g>
+    );
+  }
+
+  // Reconstructed NeighborhoodScene from neighborhood.jsx
+  function NeighborhoodScene({ count, states, weather, gridStress, hoveredBuilding, onHover }) {
+    const layout = computeLayout(count);
+    const totalW = layout.length > 0 ? layout[layout.length-1].x + layout[layout.length-1].w + 40 : 800;
+    const groundY = 280;
+
+    const lineColor = gridStress ? "var(--terracotta)" : "var(--line-2)";
+    const lineDash = gridStress ? "8 6" : "6 6";
+    const lineAnim = gridStress ? "dash-move 1s linear infinite" : "none";
+
+    // Color Temperature specific variables
+    const skyColor = weather === 'sunny' ? 'var(--ochre)' : weather === 'cold' ? 'var(--sky)' : 'var(--line)';
+    const skyOpacity = weather === 'sunny' ? 0.12 : weather === 'cold' ? 0.25 : 0.05;
+
+    return (
+      <div className="figure-canvas">
+        <svg viewBox={`0 0 ${totalW} 320`} width={totalW} height={320} style={{ display: 'block', margin: '0 auto' }}>
+          
+          {/* Color Temperature Sky Overlay */}
+          <rect x="0" y="0" width="100%" height="100%" fill={skyColor} opacity={skyOpacity} style={{ transition: 'all 0.6s ease' }} />
+
+          {/* Weather Sky Element */}
+          {weather === 'sunny' && (
+             <g style={{ animation: 'float-up 1s ease' }}>
+               <circle cx={totalW/2} cy="80" r="40" fill="var(--ochre)" opacity="0.8"/>
+               <circle cx={totalW/2} cy="80" r="60" fill="var(--ochre)" opacity="0.15"/>
+             </g>
+          )}
+          {weather === 'mild' && (
+             <g fill="var(--sky)" opacity="0.7" style={{ animation: 'float-up 1s ease' }}>
+               <circle cx={totalW/2 - 20} cy="70" r="30" />
+               <circle cx={totalW/2 + 20} cy="80" r="20" />
+               <rect x={totalW/2 - 30} y="70" width="60" height="30" rx="15" />
+             </g>
+          )}
+          {/* Power lines */}
+          <path d={`M 0,${groundY - 180} L ${totalW},${groundY - 180}`} stroke={lineColor} strokeWidth={gridStress ? 1.5 : 1} strokeDasharray={lineDash} style={{ animation: lineAnim }} />
+          <path d={`M 0,${groundY - 150} L ${totalW},${groundY - 150}`} stroke={lineColor} strokeWidth={gridStress ? 1.5 : 1} strokeDasharray={lineDash} style={{ animation: lineAnim }} />
+          
+          {/* Ground */}
+          <line x1={0} y1={groundY} x2={totalW} y2={groundY} stroke="var(--ink)" strokeWidth="1.5" />
+          
+          {/* Buildings */}
+          {layout.map(b => {
+            const s = states[b.id] || { lit: true, dimmed: false };
+            return (
+              <g 
+                key={b.id}
+                onMouseEnter={() => onHover && onHover(b.id)}
+                onMouseLeave={() => onHover && onHover(null)}
+                style={{ cursor: 'pointer' }}
+              >
+                <BuildingElevation
+                  {...b}
+                  y={groundY - b.h}
+                  lit={s.lit}
+                  dimmed={s.dimmed}
+                  speech={s.speech}
+                  highlight={hoveredBuilding === b.id || s.highlight}
+                  isHost={s.isHost}
+                />
+              </g>
+            )
+          })}
+        </svg>
+      </div>
+    );
+  }
+
+  // Wrapper Application to control the Figure parameters
+  function FigureApp() {
+    const [count, setCount] = useState(8);
+    const [weather, setWeather] = useState('sunny');
+    const [strategy, setStrategy] = useState('friendly');
+    const [manualFlexAsked, setManualFlexAsked] = useState(150);
+    const [hoveredBuilding, setHoveredBuilding] = useState(null);
+    
+    // Animation Step State: 
+    // 0: Idle, 1: Ask, 2: Coordinator receives, 3: Spread word, 4: Check self, 5: Negotiate, 6: Deal & Delivered
+    const [animStep, setAnimStep] = useState(0); 
+    
+    // Data States calculated on Trigger
+    const [flexAsked, setFlexAsked] = useState(150);
+    const [finalOffers, setFinalOffers] = useState({});
+    const [totalOffered, setTotalOffered] = useState(0);
+
+    const layout = computeLayout(count);
+    
+    // Ensure the coordinator (host) is the tallest building so its speech bubble isn't hidden by neighbors
+    let hostId = 0;
+    let maxH = 0;
+    layout.forEach(b => {
+        if (b.h > maxH) {
+            maxH = b.h;
+            hostId = b.id;
+        }
+    });
+
+    // Derived narrative context and mathematical signs based on weather
+    const isShedding = weather !== 'sunny';
+    const sign = isShedding ? '−' : '+';
+    const narrativeReason = weather === 'sunny'
+      ? "Too much solar is pushing into the grid. The operator needs someone to soak it up: by charging cars, pre-heating water, running the cold store now."
+      : weather === 'cold'
+        ? "It's cold out. Everyone's heat pumps are working hard. The operator needs the neighborhood to use less for a few hours."
+        : "Evening rush. Ovens, EVs, TVs all firing at once. The operator needs the neighborhood to trim a little.";
+    
+    // Reset states when layout/weather changes manually
+    useEffect(() => {
+       setAnimStep(0);
+       setFinalOffers({});
+       setTotalOffered(0);
+    }, [count, weather, strategy, manualFlexAsked]);
+
+    // Handle the timed animation sequence
+    useEffect(() => {
+        if (animStep === 0 || animStep === 6) return;
+        
+        // Define delays for each phase so users can read the speech bubbles
+        const delays = {
+            1: 1500, // Grid operator ask -> Host highlight
+            2: 2000, // Coordinator receives -> Spread word
+            3: 2000, // Spread word -> Checking self
+            4: 2000, // Checking self -> Negotiate
+            5: 2500  // Negotiate -> Deal Reached
+        };
+        
+        const timer = setTimeout(() => setAnimStep(s => s + 1), delays[animStep]);
+        return () => clearTimeout(timer);
+    }, [animStep]);
+
+    const simulateFlexEvent = () => {
+       setFlexAsked(manualFlexAsked);
+
+       // Calculate final outcomes immediately when button is pressed based on Negotiation style
+       let prob = 0.8;
+       let minKwh = 12;
+       let randKwh = 30;
+       
+       if (strategy === 'shy') {
+           prob = 0.4;
+           minKwh = 5;
+           randKwh = 15;
+       } else if (strategy === 'eager') {
+           prob = 0.95;
+           minKwh = 20;
+           randKwh = 40;
+       }
+
+       const newOffers = {};
+       let currentTotal = 0;
+       
+       for(let i=0; i<count; i++) {
+          if (i === hostId) continue;
+          const isParticipating = Math.random() < prob; 
+          if (isParticipating) {
+              const kwh = Math.floor(Math.random() * randKwh) + minKwh;
+              newOffers[i] = kwh;
+              currentTotal += kwh;
+          }
+       }
+       
+       setFinalOffers(newOffers);
+       setTotalOffered(currentTotal);
+       
+       // Start the animation workflow
+       setAnimStep(1); 
+    };
+
+    // Calculate states for the NeighborhoodScene dynamically based on the current animation step
+    const states = {};
+    const gridStress = animStep > 0 && animStep < 6;
+
+    for (let i = 0; i < count; i++) {
+        let lit = true;
+        let dimmed = false;
+        let speech = null;
+        let highlight = false;
+        let isHost = false;
+
+        if (i === hostId) {
+            if (animStep >= 2 && animStep <= 5) isHost = true;
+
+            if (animStep === 2) speech = "Incoming request";
+            else if (animStep === 3) speech = isShedding ? "Can anyone shed load?" : "Can anyone soak up power?";
+            else if (animStep === 4) speech = "Waiting for answers...";
+            else if (animStep === 5) speech = "Calculating deal...";
+            
+        } else {
+            const offer = finalOffers[i];
+            
+            if (animStep === 4) {
+                speech = "Checking...";
+                highlight = true;
+            } else if (animStep === 5) {
+                speech = offer ? `~ ${sign}${offer} kWh?` : "Can't help";
+                highlight = true;
+            } else if (animStep === 6) {
+                if (offer) {
+                    speech = `${sign}${offer} kWh`;
+                    highlight = true;
+                    lit = isShedding ? false : true;
+                    dimmed = isShedding ? true : false;
+                }
+            }
+        }
+        
+        states[i] = { lit, dimmed, speech, highlight, isHost };
+    }
+
+    // Calculate metrics for display
+    const percentMet = flexAsked > 0 ? Math.min(100, Math.round((totalOffered / flexAsked) * 100)) : 0;
+    const isNegotiating = animStep > 0 && animStep < 6;
+
+    return (
+       <div className="app-wrapper">
+          <div className="section-head">
+             <div className="eyebrow">Your turn</div>
+             <h2 className="section-title">Be the grid operator.<br/><em>Ask the neighborhood for help.</em></h2>
+             <p className="lede">
+               Decide how much electricity you need the neighborhood to skip, pick the weather and the neighbors' mood, then hit the button. Watch them work it out. The numbers shift because, just like real life, it depends on who's in the room.
+             </p>
+          </div>
+
+          <div className="figure-container">
+             <div className="narrative-box">
+                <div className="narrative-title">Grid is overloaded</div>
+                <div className="narrative-desc">{narrativeReason}</div>
+             </div>
+             
+             <NeighborhoodScene 
+                count={count} 
+                states={states} 
+                weather={weather} 
+                gridStress={gridStress}
+                hoveredBuilding={hoveredBuilding}
+                onHover={setHoveredBuilding}
+             />
+
+             {animStep === 6 && (
+                <div className="results-panel">
+                  <div className="offers-grid">
+                     {Object.entries(finalOffers).map(([id, val]) => {
+                        const b = layout.find(x => x.id === +id);
+                        return (
+                          <div key={id} className="offer-tag">
+                            <span>{b?.label}</span> 
+                            <strong>{sign}{val} kWh</strong>
+                          </div>
+                        );
+                     })}
+                  </div>
+                  
+                  <div className="summary-block">
+                     <div className="summary-label">They offered</div>
+                     <div className="summary-value">{sign}{totalOffered} kWh</div>
+                     <div className="summary-subtext">
+                       of {sign}{flexAsked} kWh asked &middot; {percentMet}% covered
+                     </div>
+                     <div className="summary-msg">
+                       {percentMet >= 100 
+                         ? "Request fully met. Nobody had to suffer discomfort." 
+                         : "Partial help: the grid operator will find the rest elsewhere."}
+                     </div>
+                  </div>
+                </div>
+             )}
+             
+             {/* Always visible Control Bar */}
+             <div className="controls-bar">
+                <div className="controls-group">
+                  <span className="controls-label">Buildings</span>
+                  <div className="controls-row-align">
+                    <input 
+                      type="range" min="3" max="12" 
+                      value={count} 
+                      onChange={e => setCount(+e.target.value)} 
+                      disabled={isNegotiating} 
+                    />
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{count}</span>
+                  </div>
+                </div>
+                
+                <div className="controls-group">
+                  <span className="controls-label">Amount to shed</span>
+                  <div className="controls-row-align">
+                    <input 
+                      type="range" min="50" max="300" step="10"
+                      value={manualFlexAsked} 
+                      onChange={e => setManualFlexAsked(+e.target.value)} 
+                      disabled={isNegotiating} 
+                    />
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{manualFlexAsked} kWh</span>
+                  </div>
+                </div>
+
+                <div className="controls-group">
+                  <span className="controls-label">Weather</span>
+                  <div className="tweak-seg">
+                     {['Sunny', 'Mild', 'Cold'].map(w => (
+                       <button 
+                         key={w} 
+                         className={weather === w.toLowerCase() ? 'on' : ''} 
+                         onClick={() => setWeather(w.toLowerCase())}
+                         disabled={isNegotiating}
+                       >
+                         {w}
+                       </button>
+                     ))}
+                  </div>
+                </div>
+
+                <div className="controls-group">
+                  <span className="controls-label">Negotiation style</span>
+                  <div className="tweak-seg">
+                     {['Shy', 'Friendly', 'Eager'].map(s => (
+                       <button 
+                         key={s} 
+                         className={strategy === s.toLowerCase() ? 'on' : ''} 
+                         onClick={() => setStrategy(s.toLowerCase())}
+                         disabled={isNegotiating}
+                       >
+                         {s}
+                       </button>
+                     ))}
+                  </div>
+                </div>
+                
+                <div className="controls-group">
+                  <button 
+                    onClick={simulateFlexEvent} 
+                    className="btn-primary"
+                    disabled={isNegotiating}
+                  >
+                    {isNegotiating ? "Negotiating..." : "Trigger Flex Event"}
+                  </button>
+                </div>
+             </div>
+          </div>
+       </div>
+    );
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<FigureApp />);
+</script>
+
+</body>
+</html>
