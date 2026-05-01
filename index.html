@@ -67,14 +67,28 @@ body {
 /* Header & Intro Styles */
 .app-wrapper {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
 
+@media (min-width: 1024px) {
+  .app-wrapper {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
 .section-head {
-  max-width: 700px;
+  max-width: 400px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+  .section-head {
+    max-width: 100%;
+  }
 }
 
 .eyebrow {
@@ -113,7 +127,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 20px 60px -20px rgba(26,31,27,0.15);
   width: 100%;
-  max-width: 1200px;
+  flex-grow: 1;
   overflow: hidden;
   transition: all 0.4s ease;
 }
